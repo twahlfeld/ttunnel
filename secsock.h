@@ -25,6 +25,7 @@
 
 static char kludge;
 #define WAITFORACK(s) ssl_recv(s, &kludge, 1)
+#define SENDACK(s) ssl_send(s, "1", 1)
 
 /*
  * Generates an IV for AES-CBC  encryption
@@ -42,7 +43,8 @@ void generate_IV(unsigned char *iv, const int ivlen);
  *                             received from the sender
  * returns the total amount of bytes read and decrypted
  */
-ssize_t crypto_recv_file(SSL *conn, const unsigned char *key, FILE *file);
+ssize_t crypto_recv_file(SSL *conn, const unsigned char *key,
+                         const char *fname);
 
 /*
  * Sends AES-CBC-128 bit encrypted file to the receiver
@@ -64,10 +66,9 @@ ssize_t crypto_send_file(SSL *conn, char *fname, const unsigned char *key,
  *                             received from the sender
  * returns the total amount of bytes sent and encrypted
  */
-ssize_t ssl_send_file(SSL *conn, char *fname, const unsigned char *key,
-                      const unsigned char *iv);
+ssize_t ssl_send_file(SSL *conn, const char *fname);
 
-SSL_CTX *init_ctx(const char *fname);
+SSL_CTX *init_ctx(const char *fname, const char *ca);
 
 SSL *init_conn(BIO *conn, SSL_CTX *ctx);
 

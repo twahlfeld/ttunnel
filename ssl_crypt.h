@@ -13,4 +13,8 @@
  */
 int hash_file(const char *fname, unsigned char *hash);
 
+int create_hash_file(SSL *conn, const char *fname);
+
+int hash_str(const char *str, unsigned char *hash, size_t len);
+
 #endif //TTUNNEL_SSL_CRYPT_H

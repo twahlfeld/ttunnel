@@ -14,19 +14,22 @@ default: client server
 	rm -rf *~ a.out *.o *dSYM
 
 ERR_SRC = error.h error.cpp
+
+
+
 SOCK_SRC = secsock.h secsock.cpp $(ERR_SRC)
 
-server: error.o secsock.o server.o
+server: error.o secsock.o server.o ssl_crypt.o
 
-client: error.o secsock.o client.o
+client: error.o secsock.o client.o ssl_crypt.o
 
 error.o: $(ERR_SRC)
 
 secsock.o: $(SOCK_SRC)
 
-server.o: server.cpp $(AUTH_SRC)
+server.o: server.cpp $(SOCK_SRC)
 
-client.o: client.cpp $(AUTH_SRC)
+client.o: client.cpp $(SOCK_SRC)
 	g++ $(CXXFLAGS) -c client.cpp -o client.o
 
 .PHONY: clean
