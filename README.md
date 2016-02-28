@@ -2,6 +2,7 @@
 Client/Server TLS Tunnel for FTP Shell
 
 Certificate Generation:
+
     ROOT CA:
         openssl req -newkey rsa:2048 -sha256 -keyout rootkey.pem -out rootreq.pem
         openssl x509 -req -in rootreq.pem -sha256 -extfile openssl.cnf -extensions v3_ca -signkey rootkey.pem -out rootcert.pem
