@@ -1,4 +1,7 @@
-# ttunnel
+Network Security HW 2
+Theodore Ahlfeld
+twa2108
+
 Client/Server TLS Tunnel for FTP Shell
 
 Certificate Generation:
@@ -27,4 +30,47 @@ Certificate Generation:
         cat clientcert.pem clientkey.pem rootcert.pem > client.pem
         openssl x509 -subject -issuer -noout -in client.pem
 
+Compilation
+
+    Compile server and client
+    $ make
+
+    Compile server
+    $ make server
+
+    Compile client
+    $ make client
+
+Running
+    To run server
+    $ ./server PORT SRV_CERT ROOTCA (optional MOTD)
+
+    To run client
+    $ ./client IP PORT CLNT_CERT ROOTCA
+
+    There are 4 commands for the shell in client
+    "help" displays this message
+    "stop" exits the program
+    "put" uploads a local file to the server
+        USAGE:
+            put relative/file/path.ext N/(E PASSWORD)
+            put /full/file/path.ext N/(E PASSWORD)
+
+    "get" downloads a remote file from the server and stores it in the current local directory
+        USAGE:
+            get relative/file/path.ext N/(E PASSWORD)
+            get /full/file/path.ext N/(E PASSWORD)
+
+    In get/put, if the N flag is there, there must not be a password
+    In get/put, if the E flag is there, there must be a password
+    N means send/receive the file in plain text
+    The password if used must be 8 ASCII character
+    If the file name begins with a / implies file name is full path otherwise it is relative
+
+    Example put:
+        put path/file.ext N\n"
+        put /full/path/file.ext E password\n"
+    Example get:
+        get path/file.ext N\n"
+        get /full/path/file.ext E password\n"
 
