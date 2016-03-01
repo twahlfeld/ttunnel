@@ -231,7 +231,7 @@ int response(SSL *conn, char *buf, size_t nel)
 int parse_cmd(char *buf, char *fname, unsigned char *key)
 {
     int put, encrypt;
-    char *tmp = nullptr, *flag = nullptr;
+    char *tmp = nullptr;
     if((tmp = strtok(buf, " ")) == nullptr) return INVALD_CMD;
     if(!strcmp(tmp, "stop")) return EXIT_LOOP;
     if(!strcmp(tmp, "help")) return HELP;
@@ -242,13 +242,15 @@ int parse_cmd(char *buf, char *fname, unsigned char *key)
     } else {
         return INVALD_CMD;
     }
-    if((tmp = strtok(nullptr, " ")) == nullptr) return NO_FILE; 
+    if((tmp = strtok(nullptr, " ")) == nullptr) return NO_FILE;
     strcpy(fname, tmp);
-    if(access(fname, R_OK)==-1) return FILE_NOT_FOUND;
-    if((flag = strtok(nullptr, " ")) == nullptr) return  NO_FLAG; 
-    if(flag[0] == 'E') {
+    if(put) {
+        if(access(fname, R_OK)==-1) return FILE_NOT_FOUND;
+    }
+    if((tmp = strtok(nullptr, " ")) == nullptr) return  NO_FLAG;
+    if(tmp[0] == 'E') {
         encrypt = 1;
-    } else if (flag[0] == 'N') {
+    } else if (tmp[0] == 'N') {
         encrypt = 0;
     } else {
         return INVALD_FLAG;
@@ -372,6 +374,7 @@ int main(int argc, char *argv[])
     ssl_conn = init_conn(conn, ctx);
 
     clnt_loop(ssl_conn);
+    fprintf(stderr, "Disconnecting\n");
 
     /* SSL Socket Cleanup */
     SSL_shutdown(ssl_conn);
