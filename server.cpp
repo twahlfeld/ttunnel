@@ -27,12 +27,24 @@
 
 #define BUFFSIZE 128
 
-void print_help(const char *fname)
+static const char *motd;
+
+/*
+ * Prints Help to initiate connection
+ * const char *fname -> argv[0] or name of program
+ */
+void print_startup_help(const char *fname)
 {
-    fprintf(stderr, "%s (port) (certificate) (root ca)", fname);
+    fprintf(stderr, "%s (port) (certificate) (root ca) (optional motd", fname);
     exit(0);
 }
 
+/*
+ * Sends the hash stored in the file to client
+ * SSL *conn         -> The clients SSL connection
+ * const char *fname -> The name of the file to get the corresponding sha256
+ * returns 0 if sha256 could not be found otherwise 1
+ */
 int send_hash(SSL *conn, const char *fname)
 {
     /* Send Hash of Plain Text */
@@ -48,13 +60,21 @@ int send_hash(SSL *conn, const char *fname)
     return 1;
 }
 
-ssize_t recv_file(SSL *conn, char *fpath)
+/*
+ * Receives the file from client and stores it in the current directory
+ * SSL *conn         -> The clients SSL connection
+ * const char *fpath -> The path of the file the client is sending
+ * returns the amount of bytes received or FILE_NOT_FOUND if error occurred
+ */
+ssize_t recv_file(SSL *conn, const char *fpath)
 {
     char buf[BUFFSIZE*2];
-    char *fname = fpath +strlen(fpath)-1;
+
+    /* Get the file name only */
+    const char *fname = fpath +strlen(fpath)-1;
     while(*(fname-1)!='/') fname--;
     ssize_t len;
-
+    SENDACK(conn);
     /* Creates SHA256 Hash File */
     create_hash_file(conn, fname);
     SENDACK(conn);
@@ -75,9 +95,21 @@ ssize_t recv_file(SSL *conn, char *fpath)
     return len;
 }
 
-
+/*
+ * Send the file to client
+ * SSL *conn         -> The clients SSL connection
+ * const char *fpath -> The path of the file the client is receiving
+ */
 ssize_t send_file(SSL *conn, const char *fname)
 {
+    /* Checks if both file and sha256 companion can be read */
+    char shafile[BUFFSIZE];
+    strcpy(shafile, fname);
+    strcat(shafile, ".sha256");
+    if(access(fname, R_OK)==-1) return FILE_NOT_FOUND;
+    if(access(shafile, R_OK)==-1) return FILE_NOT_FOUND;
+
+    SENDACK(conn);
     char buf[BUFFSIZE*2];
     ssize_t len;
     send_hash(conn, fname);
@@ -98,12 +130,16 @@ ssize_t send_file(SSL *conn, const char *fname)
 }
 
 
-
+/*
+ * Parses the input received for the client
+ * SSL *conn    -> The clients SSL connection
+ * char *input  -> the input from the client
+ * returns the result of calling the corresponding command
+ */
 int parse_input(SSL *conn, char *input)
 {
     char *cmd = strtok(input, " ");
     char *fname = strtok(nullptr, " ");
-    SENDACK(conn);
     ssize_t res = 0;
     if(!strcmp(cmd, "PUT")) {
         res = recv_file(conn, fname);
@@ -113,17 +149,24 @@ int parse_input(SSL *conn, char *input)
     return (int)res;
 }
 
-void *srv_in_loop(void *data)
+/*
+ * The loop that handles the clients input
+ * void *data   -> (SSL *) connection of the client
+ */
+void *clnt_loop(void *data)
 {
     SSL *conn = (SSL *)data;
     char buf[BUFFSIZE];
     ssize_t len;
     ERR_clear_error();
+    ssl_send(conn, motd, strlen(motd));
     while(1) {
         if((len = ssl_recv(conn, buf, sizeof(buf)-1))<=0) break;
         buf[len] = '\0';
-        fprintf(stderr, "%s\n", buf);
-        parse_input(conn, buf);
+        if(parse_input(conn, buf) == FILE_NOT_FOUND) {
+            buf[0] = FILE_NOT_FOUND;
+            ssl_send(conn, buf, 1);
+        }
     }
     SSL_get_shutdown(conn);
     pthread_detach(pthread_self());
@@ -134,18 +177,19 @@ int main(int argc, char *argv[])
 {
     if(argc == 1) {
         fprintf(stderr, "Invalid Arguments\n");
-        print_help(argv[0]);
+        print_startup_help(argv[0]);
     }
     if(!strcmp(argv[1],"-h")||!strcmp(argv[1],"--help")) {
-        print_help(argv[0]);
+        print_startup_help(argv[0]);
     }
     if(argc < 4) {
         fprintf(stderr, "Invalid Arguments\n");
-        print_help(argv[0]);
+        print_startup_help(argv[0]);
     }
     const char *port = argv[1];
     const char *cert = argv[2];
     const char *rootca = argv[3];
+    motd = (argc==5 ? (const char *)argv[4] : "Welcome");
     int max = 3;
     INIT_SSL_LIB;
     BIO *srv = nullptr;
@@ -156,7 +200,7 @@ int main(int argc, char *argv[])
 
     while(!(ctx = init_ctx(cert, rootca))&&--max);
     if(!max) {
-        die_with_err("Failed Maximum Tried");
+        die_with_err("Failed Maximum Attempts");
     }
     ERRCHK(srv = BIO_new_accept(port), ==, 0, "BIO_new_accept() failed");
     ERRCHK(BIO_do_accept(srv), <=, 0, "BIO_do_accept() failed");
@@ -177,7 +221,7 @@ int main(int argc, char *argv[])
         }
 
         /* I/O threads */
-        pthread_create(&ssl_in, nullptr, srv_in_loop, ssl_conn);
+        pthread_create(&ssl_in, nullptr, clnt_loop, ssl_conn);
     }
 
     SSL_CTX_free(ctx);

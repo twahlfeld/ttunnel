@@ -1,14 +1,53 @@
-//
-// Created by Theodore Ahlfeld on 2/25/16.
-//
+/*******************************************************************************
+ *                                                                             *
+ *       Filename:  ssl_crypt.cpp                                              *
+ *                                                                             *
+ *    Description:  Basic Cryptographic function such as hash and IV genetation*
+ *                                                                             *
+ *         Public:                                                             *
+ *                  Generates a random IV                                      *
+ *                      unsigned char *generate_IV(unsigned char *iv,          *
+ *                              const int ivlen)                               *
+ *                                                                             *
+ *                  Hashes file using sha256                                   *
+ *                      int hash_file(const char *fname, unsigned char *hash)  *
+ *                                                                             *
+ *                  Hashes a string of size len in sha256                      *
+ *                      int hash_str(const char *str, unsigned char *hash,     *
+ *                              size_t len)                                    *
+ *                                                                             *
+ *                  Creates a sha256 file and writes data to it                *
+ *                      int create_hash_file(SSL *conn, const char *fname)     *
+ *                                                                             *
+ *        Version:  1.0                                                        *
+ *        Created:  02/22/2016 03:30:40 PM                                     *
+ *       Revision:  none                                                       *
+ *         Author:  Theodore Ahlfeld (twa2108)                                 *
+ *       Compiler:  gcc                                                        *
+ *                                                                             *
+ *   Organization:                                                             *
+ *                                                                             *
+ ******************************************************************************/
 
 #include <cstdio>
-#include <cstdlib>
 #include <openssl/ossl_typ.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 #include "secsock.h"
 #include "error.h"
 #include "ssl_crypt.h"
+
+/*
+ * Generates an IV for AES-CBC  encryption
+ * unsigned char *iv    -> The buffer to store the IV
+ * const int ivlen      -> The number of bytes for the IV
+ * returns the address of iv
+ */
+unsigned char *generate_IV(unsigned char *iv, const int ivlen)
+{
+    RAND_bytes(iv, ivlen);
+    return iv;
+}
 
 /*
  * Hashes the file using SHA256 and stores it into the hash array argument
@@ -43,6 +82,12 @@ int hash_file(const char *fname, unsigned char *hash)
     return -1;
 }
 
+/*
+ * Hashes a string of to a hash of size len using sha256
+ * const char *str      -> The string to hash
+ * unsgined char *hash  -> The array to store the hash, must be proper size
+ * size_t len           -> The amount of bytes to hash
+ */
 int hash_str(const char *str, unsigned char *hash, size_t len)
 {
     unsigned char buffer[EVP_MAX_MD_SIZE];
@@ -68,6 +113,11 @@ int hash_str(const char *str, unsigned char *hash, size_t len)
     return 0;
 }
 
+/*
+ * Crates a sha256 file and reads data from the SSL connection to write from
+ * SSL *conn            -> The SSL connection fo the remote node
+ * const char *fname    -> The name of the file to hash
+ */
 int create_hash_file(SSL *conn, const char *fname)
 {
     ssize_t len;
