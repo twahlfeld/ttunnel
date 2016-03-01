@@ -7,7 +7,7 @@ INCLUDES = -I/usr/local/opt/openssl/include
 CFLAGS   = -g -Wall $(INCLUDES)
 CXXFLAGS = -g -Wall $(INCLUDES) -std=c++0x
 LDFLAGS = -g
-LDLIBS  = -lssl -lcrypto
+LDLIBS  = -lssl -lcrypto -lpthread
 
 .PHONY: default
 default: client server

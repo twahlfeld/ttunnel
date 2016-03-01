@@ -14,6 +14,7 @@
  *                                                                             *
  ******************************************************************************/
 
+#include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
     if(!max) {
         die_with_err("Failed Maximum Attempts");
     }
-    ERRCHK(srv = BIO_new_accept(port), ==, 0, "BIO_new_accept() failed");
+    ERRCHK(srv = BIO_new_accept((char *)port), ==, 0, "BIO_new_accept() failed");
     ERRCHK(BIO_do_accept(srv), <=, 0, "BIO_do_accept() failed");
     for(;;) {
         if(BIO_do_accept(srv) <=0 ) {
